@@ -9,6 +9,7 @@ from crud import checkForValidLogin,createUser
 import jwt
 from functools import wraps
 from auth import sign_jwt,decode_jwt
+import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, UpSampling2D
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -19,12 +20,73 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 import io
-model = load_model('./autoencoder.keras')
-encoder_model = load_model('./encoder_model.keras')
-with open('./kde_model.pkl', 'rb') as f:
-    kde = pickle.load(f)
-encoded_images_vector = np.load('./encoded_images_vector.npy', allow_pickle=True)
-out_vector_shape = 512
+from tensorflow.keras.utils import register_keras_serializable
+import cv2
+from zipfile import ZipFile
+
+def load_images(image_directory):
+    images = []
+
+    # Iterate through all files in the directory
+    for file_name in os.listdir(image_directory):
+        if file_name.endswith(('.png', '.jpg', '.jpeg')):  # Check if it's an image file
+            image_path = os.path.join(image_directory, file_name)
+            img = Image.open(image_path).resize((32, 32))  # Ensure size is 32x32
+            images.append(np.array(img))  # Add to the list
+
+    # Convert the list to a NumPy array
+    images = np.array(images) / 255.0  # Normalize to [0, 1]
+    print(f"Loaded {images.shape[0]} unlabelled images.")
+    images.shape
+    return images
+
+@register_keras_serializable()
+def SSIMLoss(y_true, y_pred):
+    # Convert to float32 to ensure consistent tensor type
+    y_true = tf.cast(y_true, tf.float32)
+    y_pred = tf.cast(y_pred, tf.float32)
+
+    # Ensure compatible shapes
+    if y_true.shape[-1] != y_pred.shape[-1]:
+        if y_true.shape[-1] == 3:
+            y_true = tf.image.rgb_to_grayscale(y_true)
+        elif y_pred.shape[-1] == 3:
+            y_pred = tf.image.rgb_to_grayscale(y_pred)
+
+    return 1 - tf.reduce_mean(tf.image.ssim(y_true, y_pred, max_val=1.0))
+def rgb_to_grayscale(images):
+    return tf.image.rgb_to_grayscale(images)
+
+def unzip(content):
+    zip_output = []
+    with ZipFile(io.BytesIO(content), 'r') as zip_file:
+        for file_name in zip_file.namelist():
+            # Check if the file is an image based on extension
+            if file_name.lower().endswith(('png', 'jpg', 'jpeg')):
+                with zip_file.open(file_name) as file:
+                    try:
+                        # Read and convert the image to a NumPy array
+                        image = Image.open(io.BytesIO(file.read()))
+                        numpy_image = np.array(image)
+
+                        # Append the NumPy array to the output list
+                        zip_output.append(numpy_image)
+
+                        # Add these lines to verify:
+                        # print(f"File: {file_name}")
+                        # print("Type:", type(numpy_image))
+                        # print("Shape:", numpy_image.shape)
+                        # print("Data type:", numpy_image.dtype)
+
+                    except Exception as e:
+                        print(f"Error processing file {file_name}: {e}")
+
+    return zip_output  # Make sure to return the list
+
+
+normal_test_images = load_images('./test')
+model  = tf.keras.models.load_model('./test.keras')
+
 
 app = FastAPI()
 origins = [
@@ -85,30 +147,24 @@ async def runModel(request: Request):
 
     if(typeOfFile=='png' or typeOfFile=='jpg' or typeOfFile == 'jpeg'):
         content = await form['file'].read()
-        output = check_anomaly(content)
+        img = Image.open(io.BytesIO(content))
+        img = np.array(img.resize((128, 128), Image.Resampling.LANCZOS))
+        # img = preprocess_images(img)
+        output = model.predict(img)
         return {"success":True,"output":output}
+    elif typeOfFile == 'zip':
+        content = await form['file'].read()
+        # file_path = form['file'].filename  # Assuming this provides the path to the uploaded file
 
+        zip_images = unzip(content)
+        zip_images = rgb_to_grayscale(zip_images)
+        # decoded_test = model.predict(normal_test_images)
+        decoded_anomaly = model.predict(zip_images)
+        value_a = SSIMLoss(normal_test_images[0], decoded_anomaly[0])
+        n_v = float(value_a.numpy())
+        if n_v> 0.2:
+            return{"success":True,"anomaly":True,"reconstruction_error":n_v}
+        else:
+            return{"success":True,"anomaly":False,"reconstruction_error":n_v}
+         
     return {"success":False,"msg":"File Type not supported"}
-
-def check_anomaly(bimage):
-    density_threshold = 320  # Set this value based on the above exercise
-    reconstruction_error_threshold = 0.00736351  # Set this value based on the above exercise
-    img = Image.open(io.BytesIO(bimage))
-    img = np.array(img.resize((128, 128), Image.Resampling.LANCZOS))
-    plt.imshow(img)
-    img = img / 255.
-    img = img[np.newaxis, :, :, :]
-    encoded_img = encoder_model.predict([[img]])
-    encoded_img = [np.reshape(img, (out_vector_shape)) for img in encoded_img]
-    density = kde.score_samples(encoded_img)[0]
-
-    reconstruction = model.predict([[img]])
-    reconstruction_error = model.evaluate([reconstruction], [[img]], batch_size=1)[0]
-
-    if density < density_threshold or reconstruction_error > reconstruction_error_threshold:
-        return({"msg":"anamoly",
-                "recon_error":reconstruction_error})
-
-    else:
-        return({"msg":"Not an anomaly",
-                "recon_error":reconstruction_error})
