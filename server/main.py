@@ -10,11 +10,11 @@ import jwt
 from functools import wraps
 from auth import sign_jwt,decode_jwt
 import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, UpSampling2D
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+# from tensorflow.keras.models import Sequential
+# from tensorflow.keras.layers import Conv2D, MaxPooling2D, UpSampling2D
+# from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import load_model
-import pickle
+# import pickle
 from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
@@ -54,6 +54,61 @@ def SSIMLoss(y_true, y_pred):
 def rgb_to_grayscale(images):
     return tf.image.rgb_to_grayscale(images)
 
+def numpy_arrays_to_zip(numpy_arrays, image_format='png', prefix='image_'):
+    """
+    Convert a list of 32x32x1 NumPy arrays to a ZIP file containing images.
+
+    Parameters:
+    - numpy_arrays: List of NumPy arrays (32x32x1)
+    - image_format: Format to save images (default 'png')
+    - prefix: Prefix for image filenames (default 'image_')
+
+    Returns:
+    - Bytes object containing the ZIP file
+    """
+    # Create an in-memory bytes buffer for the ZIP file
+    zip_buffer = io.BytesIO()
+
+    # Create a ZipFile object
+    with ZipFile(zip_buffer, 'w', ZIP_DEFLATED) as zip_file:
+        # Iterate through the NumPy arrays
+        for i, array in enumerate(numpy_arrays):
+            # Validate array shape
+            if array.shape != (32, 32, 1) and array.shape != (32, 32):
+                raise ValueError(f"Expected shape (32, 32, 1) or (32, 32), got {array.shape}")
+
+            # Squeeze the array if it's 32x32x1
+            if array.shape == (32, 32, 1):
+                array = array.squeeze()
+
+            # Ensure array is uint8
+            if array.dtype != np.uint8:
+                array = array.astype(np.uint8)
+
+            # Create PIL Image from the NumPy array
+            pil_image = Image.fromarray(array, mode='L')
+
+            # Create an in-memory bytes buffer for the image
+            img_buffer = io.BytesIO()
+
+            # Save the image to the buffer
+            pil_image.save(img_buffer, format=image_format)
+
+            # Reset buffer position
+            img_buffer.seek(0)
+
+            # Create filename
+            filename = f"{prefix}{i + 1}.{image_format}"
+
+            # Write the image to the ZIP file
+            zip_file.writestr(filename, img_buffer.getvalue())
+
+    # Reset the buffer position
+    zip_buffer.seek(0)
+
+    # Return the ZIP file as bytes
+    return zip_buffer.getvalue()
+
 def unzip(content):
     zip_output = []
     with ZipFile(io.BytesIO(content), 'r') as zip_file:
@@ -82,7 +137,7 @@ def unzip(content):
 
 
 normal_test_images = load_images('./test')
-model  = tf.keras.models.load_model('./test.keras')
+model  = load_model('./test.keras')
 
 
 app = FastAPI()
@@ -159,6 +214,11 @@ async def runModel(request: Request):
         decoded_anomaly = model.predict(zip_images)
         value_a = SSIMLoss(normal_test_images[0], decoded_anomaly[0])
         n_v = float(value_a.numpy())
+        zip_bytes = numpy_arrays_to_zip(decoded_anomaly)
+
+        # To save to a file:
+        with open(r'output.zip', 'wb') as f:
+            f.write(zip_bytes)
         if n_v> 0.2:
             return{"success":True,"anomaly":True,"reconstruction_error":n_v}
         else:
