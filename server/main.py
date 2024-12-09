@@ -24,6 +24,7 @@ from tensorflow.keras.utils import register_keras_serializable
 import cv2
 from zipfile import ZipFile
 import zipfile
+import base64
 
 def load_images(image_directory):
     images = []
@@ -55,21 +56,21 @@ def SSIMLoss(y_true, y_pred):
 def rgb_to_grayscale(images):
     return tf.image.rgb_to_grayscale(images)
 
-def numpy_arrays_to_zip_bytes(numpy_arrays, image_format='png', prefix='image_'):
+def numpy_arrays_to_zip(numpy_arrays, image_format='png', prefix='image_'):
     """
-    Convert a list of 32x32x1 NumPy arrays to ZIP file bytes for downloading.
-    
+    Convert a list of 32x32x1 NumPy arrays to a ZIP file containing images.
+
     Parameters:
     - numpy_arrays: List of NumPy arrays (32x32x1)
     - image_format: Format to save images (default 'png')
     - prefix: Prefix for image filenames (default 'image_')
-    
+
     Returns:
-    - Bytes object containing the ZIP file, ready for downloading
+    - Bytes object containing the ZIP file
     """
     # Create an in-memory bytes buffer for the ZIP file
     zip_buffer = io.BytesIO()
-    
+
     # Create a ZipFile object
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
         # Iterate through the NumPy arrays
@@ -77,37 +78,38 @@ def numpy_arrays_to_zip_bytes(numpy_arrays, image_format='png', prefix='image_')
             # Validate array shape
             if array.shape != (32, 32, 1) and array.shape != (32, 32):
                 raise ValueError(f"Expected shape (32, 32, 1) or (32, 32), got {array.shape}")
-            
+
             # Squeeze the array if it's 32x32x1
             if array.shape == (32, 32, 1):
                 array = array.squeeze()
-            
+
             # Ensure array is uint8
             if array.dtype != np.uint8:
                 array = array.astype(np.uint8)
-            
+
             # Create PIL Image from the NumPy array
             pil_image = Image.fromarray(array, mode='L')
-            
+
             # Create an in-memory bytes buffer for the image
             img_buffer = io.BytesIO()
-            
+
             # Save the image to the buffer
             pil_image.save(img_buffer, format=image_format)
-            
+
             # Reset buffer position
             img_buffer.seek(0)
-            
+
             # Create filename
-            filename = f"{prefix}{i+1}.{image_format}"
-            
+            filename = f"{prefix}{i + 1}.{image_format}"
+
             # Write the image to the ZIP file
             zip_file.writestr(filename, img_buffer.getvalue())
-    
-    # Get the ZIP file bytes
-    zip_bytes = zip_buffer.getvalue()
-    
-    return zip_bytes
+
+    # Reset the buffer position
+    zip_buffer.seek(0)
+
+    # Return the ZIP file as bytes
+    return zip_buffer.getvalue()
 
 def unzip(content):
     zip_output = []
@@ -214,12 +216,13 @@ async def runModel(request: Request):
         decoded_anomaly = model.predict(zip_images)
         value_a = SSIMLoss(normal_test_images[0], decoded_anomaly[0])
         n_v = float(value_a.numpy())
-        zip_bytes = numpy_arrays_to_zip_bytes(decoded_anomaly)
-
+        print("running")
+        zip_bytes = numpy_arrays_to_zip(decoded_anomaly)        
+        print("running2")
         # To save to a file:
         if n_v> 0.2:
-            return{"success":True,"anomaly":True,"reconstruction_error":n_v, "zip_file":zip_bytes}
+            return{"success":True,"anomaly":True,"reconstruction_error":n_v, "zip_file": base64.b64encode(zip_bytes).decode('utf-8')}
         else:
-            return{"success":True,"anomaly":False,"reconstruction_error":n_v, "zip_file":zip_bytes}
+            return{"success":True,"anomaly":False,"reconstruction_error":n_v, "zip_file": base64.b64encode(zip_bytes).decode('utf-8')}
          
     return {"success":False,"msg":"File Type not supported"}
