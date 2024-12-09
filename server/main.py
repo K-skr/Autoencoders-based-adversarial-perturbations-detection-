@@ -27,26 +27,23 @@ from zipfile import ZipFile
 def load_images(image_directory):
     images = []
 
-    # Iterate through all files in the directory
     for file_name in os.listdir(image_directory):
-        if file_name.endswith(('.png', '.jpg', '.jpeg')):  # Check if it's an image file
+        if file_name.endswith(('.png', '.jpg', '.jpeg')): 
             image_path = os.path.join(image_directory, file_name)
-            img = Image.open(image_path).resize((32, 32))  # Ensure size is 32x32
-            images.append(np.array(img))  # Add to the list
+            img = Image.open(image_path).resize((32, 32))  
+            images.append(np.array(img))  
 
-    # Convert the list to a NumPy array
-    images = np.array(images) / 255.0  # Normalize to [0, 1]
+    images = np.array(images) / 255.0  # Normalize 
     print(f"Loaded {images.shape[0]} unlabelled images.")
     images.shape
     return images
 
 @register_keras_serializable()
 def SSIMLoss(y_true, y_pred):
-    # Convert to float32 to ensure consistent tensor type
+    
     y_true = tf.cast(y_true, tf.float32)
     y_pred = tf.cast(y_pred, tf.float32)
 
-    # Ensure compatible shapes
     if y_true.shape[-1] != y_pred.shape[-1]:
         if y_true.shape[-1] == 3:
             y_true = tf.image.rgb_to_grayscale(y_true)
@@ -60,19 +57,19 @@ def rgb_to_grayscale(images):
 def unzip(content):
     zip_output = []
     with ZipFile(io.BytesIO(content), 'r') as zip_file:
-        for file_name in zip_file.namelist():
-            # Check if the file is an image based on extension
+        sorted_names = sorted(zip_file.namelist())
+        for file_name in sorted_names:
+            
             if file_name.lower().endswith(('png', 'jpg', 'jpeg')):
                 with zip_file.open(file_name) as file:
                     try:
-                        # Read and convert the image to a NumPy array
+                        
                         image = Image.open(io.BytesIO(file.read()))
                         numpy_image = np.array(image)
-
-                        # Append the NumPy array to the output list
+                        numpy_image = np.array(numpy_image) / 255.0 #normalize
+                    
                         zip_output.append(numpy_image)
 
-                        # Add these lines to verify:
                         # print(f"File: {file_name}")
                         # print("Type:", type(numpy_image))
                         # print("Shape:", numpy_image.shape)
@@ -81,7 +78,7 @@ def unzip(content):
                     except Exception as e:
                         print(f"Error processing file {file_name}: {e}")
 
-    return zip_output  # Make sure to return the list
+    return zip_output  
 
 
 normal_test_images = load_images('./test')

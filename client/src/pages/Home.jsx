@@ -15,7 +15,7 @@ function Home() {
     <div>
       <nav className="bg-white dark:bg-gray-900 fixed w-full z-20 top-0 start-0 border-b border-gray-200 dark:border-gray-600">
         <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-          <a href="https://flowbite.com/" className="flex items-center space-x-3 rtl:space-x-reverse">
+          <a href="http://localhost:5173" className="flex items-center space-x-3 rtl:space-x-reverse">
             <img src="https://flowbite.com/docs/images/logo.svg" className="h-8" alt="Flowbite Logo" />
             <span className="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">PDS</span>
           </a>
@@ -144,13 +144,13 @@ function Home() {
             <div className="py-1"><svg className="fill-current h-6 w-6 text-teal-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM9 11V9h2v6H9v-4zm0-6h2v2H9V5z" /></svg></div>
             <div>
                 <p className="font-bold">OUTPUT</p>
-                <p className="text-sm">{output}</p>
-                <p className="text-sm">{anomaly? <p>anomaly</p>:<p>not an anomaly</p>
+                <p className="text-sm">Reconstruction Error: {output}</p>
+                <p className="text-sm">{anomaly? <p>The input dataset is most likely an anomaly</p>:<p>The input dataset is most likely not an anomaly</p>
 }</p>
             </div>
           </div>
-          <div className=''>
-            <img src="image_5.png" id="selectedImage" className='h-32 w-32 p-1'/>
+          <div className=''>{anomaly? <img src="image_6.png" id="selectedImage" className='h-32 w-32 p-1'/>:<img src="image_5.png" id="selectedImage" className='h-32 w-32 p-1'/>}
+            
           </div>
         </div>
       </div>
