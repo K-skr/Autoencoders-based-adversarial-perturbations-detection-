@@ -6,6 +6,8 @@ function Home() {
   const [show, setShow] = useState(false);
   const [loader, setLoader] = useState(false);
   const [anomaly, setAnamoly] = useState(false);
+  const [url,setUrl] = useState(null);
+
   useEffect(()=>{
     if(!localStorage.getItem("token")){
       window.location.assign("/signin")
@@ -58,6 +60,7 @@ function Home() {
 
         try {
           setLoader(true);
+          console.log(localStorage.getItem("token"))
           fetch('http://localhost:8000/model', {
             method: 'POST',
             body: formData,
@@ -84,6 +87,19 @@ function Home() {
                   console.log(data.anomaly)
                   console.log(data.reconstruction_error)
                   setOutput(data.reconstruction_error);
+                  const byteAtob = atob(data.zip_file);
+                  const byteArray = new Uint8Array(byteAtob.length);
+                  for (let i = 0; i < byteAtob.length; i++) {
+                      byteArray[i] = byteAtob.charCodeAt(i);
+                  }
+
+                  // Create a Blob from the Uint8Array
+                  const blob = new Blob([byteArray], { type: 'application/zip' });
+
+                  // Generate a URL for the Blob
+                  const url = URL.createObjectURL(blob);
+                  setUrl(url);
+
                   setShow(true);
                 }, 3000)
               }
@@ -145,8 +161,9 @@ function Home() {
             <div>
                 <p className="font-bold">OUTPUT</p>
                 <p className="text-sm">Reconstruction Error: {output}</p>
-                <p className="text-sm">{anomaly? <p>The input dataset is most likely an anomaly</p>:<p>The input dataset is most likely not an anomaly</p>
-}</p>
+                <p className="text-sm">{anomaly? <b>The input dataset is most likely an anomaly</b>:<b>The input dataset is most likely not an anomaly</b>
+}</p> <p>{url &&<a href={url} target="_blank" rel="noopener noreferrer" className='underline' download="reconstructed_dataset.zip">Download reconstructed dataset</a> }</p>
+
             </div>
           </div>
           <div className=''>{anomaly? <img src="image_6.png" id="selectedImage" className='h-32 w-32 p-1'/>:<img src="image_5.png" id="selectedImage" className='h-32 w-32 p-1'/>}
