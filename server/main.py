@@ -25,6 +25,9 @@ import cv2
 from zipfile import ZipFile
 import zipfile
 import base64
+from classify import classify_image_from_bytes
+from prepare_imagenet_data import img_to_base64, create_image_with_labels
+from add_perturbations import add_perturbation
 
 def load_images(image_directory):
     images = []
@@ -201,28 +204,16 @@ async def runModel(request: Request):
 
     if(typeOfFile=='png' or typeOfFile=='jpg' or typeOfFile == 'jpeg'):
         content = await form['file'].read()
-        img = Image.open(io.BytesIO(content))
-        img = np.array(img.resize((128, 128), Image.Resampling.LANCZOS))
+        perturbed_image = add_perturbation(content)
+        #returns numpy array
+        orig_img, o_label = classify_image_from_bytes(content)
+        perturb_img, p_label = classify_image_from_bytes(perturbed_image)
+        # create a plot of the two images
+        plt_img = create_image_with_labels(orig_img,o_label, perturb_img,p_label)
         # img = preprocess_images(img)
-        output = model.predict(img)
-        return {"success":True,"output":output}
+        img1_64 = img_to_base64(plt_img)
+        return {"success":True,"image":img1_64}
     elif typeOfFile == 'zip':
-        content = await form['file'].read()
-        # file_path = form['file'].filename  # Assuming this provides the path to the uploaded file
-
-        zip_images = unzip(content)
-        zip_images = rgb_to_grayscale(zip_images)
-        # decoded_test = model.predict(normal_test_images)
-        decoded_anomaly = model.predict(zip_images)
-        value_a = SSIMLoss(normal_test_images[0], decoded_anomaly[0])
-        n_v = float(value_a.numpy())
-        print("running")
-        zip_bytes = numpy_arrays_to_zip(decoded_anomaly)        
-        print("running2")
-        # To save to a file:
-        if n_v> 0.2:
-            return{"success":True,"anomaly":True,"reconstruction_error":n_v, "zip_file": base64.b64encode(zip_bytes).decode('utf-8')}
-        else:
-            return{"success":True,"anomaly":False,"reconstruction_error":n_v, "zip_file": base64.b64encode(zip_bytes).decode('utf-8')}
+        return None
          
     return {"success":False,"msg":"File Type not supported"}

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
+
 function Home() {
   const [file, setFile] = useState(false);
   const [output, setOutput] = useState("");
@@ -7,6 +8,8 @@ function Home() {
   const [loader, setLoader] = useState(false);
   const [anomaly, setAnamoly] = useState(false);
   const [url,setUrl] = useState(null);
+  const [img_64, setImage] = useState(false);
+  const [label, setLabel] = useState("");
 
   useEffect(()=>{
     if(!localStorage.getItem("token")){
@@ -35,16 +38,32 @@ function Home() {
           </div>
           <div className="items-center justify-between hidden w-full md:flex md:w-auto md:order-1" id="navbar-sticky">
             <ul className="flex flex-col p-4 md:p-0 mt-4 font-medium border border-gray-100 rounded-lg bg-gray-50 md:space-x-8 rtl:space-x-reverse md:flex-row md:mt-0 md:border-0 md:bg-white dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700">
-              <li>
-                <Link to="/home" className="block py-2 px-3 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0 md:dark:text-blue-500" aria-current="page">Home</Link>
-              </li>
-              <li>
-                <Link to="/about" className="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 md:dark:hover:text-blue-500 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700">About</Link>
-              </li>
-              {/* <li>
-            <a href="#" className="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 md:dark:hover:text-blue-500 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700">Services</a>
-          </li>
-          <li>
+            <li>
+                <NavLink to="/home" className={({ isActive }) =>
+                    isActive
+                    ? 'block py-2 px-3 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0 md:dark:text-blue-500'
+                    : 'block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 md:dark:hover:text-blue-500 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700'
+                }
+                aria-current="page">Home</NavLink>
+            </li>
+            <li>
+                <NavLink to="/about" className={({ isActive }) =>
+                    isActive
+                    ? 'block py-2 px-3 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0 md:dark:text-blue-500'
+                    : 'block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 md:dark:hover:text-blue-500 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700'
+                }>
+                About</NavLink>
+            </li>
+            <li>
+                <NavLink to="/demo" className={({ isActive }) =>
+                    isActive
+                    ? 'block py-2 px-3 text-white bg-blue-700 rounded md:bg-transparent md:text-blue-700 md:p-0 md:dark:text-blue-500'
+                    : 'block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 md:dark:hover:text-blue-500 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700'
+                }>
+                Demo</NavLink>
+            </li>
+
+          {/*<li>
             <a href="#" className="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 md:dark:hover:text-blue-500 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700">Contact</a>
           </li> */}
             </ul>
@@ -83,24 +102,13 @@ function Home() {
                     
                 //     console.log("hi")
                 //   }, 10000)
-                  setAnamoly(data.anomaly)
-                  console.log(data.anomaly)
-                  console.log(data.reconstruction_error)
-                  setOutput(data.reconstruction_error);
-                  const byteAtob = atob(data.zip_file);
-                  const byteArray = new Uint8Array(byteAtob.length);
-                  for (let i = 0; i < byteAtob.length; i++) {
-                      byteArray[i] = byteAtob.charCodeAt(i);
-                  }
-
-                  // Create a Blob from the Uint8Array
-                  const blob = new Blob([byteArray], { type: 'application/zip' });
-
-                  // Generate a URL for the Blob
-                  const url = URL.createObjectURL(blob);
-                  setUrl(url);
-
-                  setShow(true);
+                  // setAnamoly(data.anomaly)
+                  console.log(data.label)
+                //   console.log(data.reconstruction_error)
+                //   setOutput(data.reconstruction_error);
+                    setImage(data.image);
+                    setLabel(data.label);
+                    setShow(true);
                 }, 3000)
               }
             })
@@ -116,7 +124,7 @@ function Home() {
                 <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2" />
               </svg>
               <p className="mb-2 text-sm text-gray-500 dark:text-gray-400"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">ZIP, PNG, JPG</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">ZIP</p>
             </div>:
             <div><b>Selected File : </b>{file}</div>}
             <input id="dropzone-file" name='dataset' type="file" className="hidden" required onChange={function me(e) {
@@ -157,17 +165,9 @@ function Home() {
       <div>
         <div className={"bg-teal-100 border-t-4 border-teal-500 rounded-b text-teal-900 px-4 py-3 shadow-md " + `${show ? "visible" : "invisible"}`} role="alert">
           <div className="flex">
-            <div className="py-1"><svg className="fill-current h-6 w-6 text-teal-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM9 11V9h2v6H9v-4zm0-6h2v2H9V5z" /></svg></div>
-            <div>
-                <p className="font-bold">OUTPUT</p>
-                <p className="text-sm">Reconstruction Error: {output}</p>
-                <p className="text-sm">{anomaly? <b>The input dataset is most likely an anomaly</b>:<b>The input dataset is most likely not an anomaly</b>
-}</p> <p>{url &&<a href={url} target="_blank" rel="noopener noreferrer" className='underline' download="reconstructed_dataset.zip">Download reconstructed dataset</a> }</p>
-
-            </div>
           </div>
-          <div className=''>{anomaly? <img src="image_6.png" id="selectedImage" className='h-32 w-32 p-1'/>:<img src="image_5.png" id="selectedImage" className='h-32 w-32 p-1'/>}
-            
+          <div className=''>
+          {img_64 && <img src={`data:image/png;base64,${img_64}`} alt="Image" />}
           </div>
         </div>
       </div>
