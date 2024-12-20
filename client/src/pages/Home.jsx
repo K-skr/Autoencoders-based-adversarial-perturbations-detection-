@@ -6,10 +6,11 @@ function Home() {
   const [output, setOutput] = useState("");
   const [show, setShow] = useState(false);
   const [loader, setLoader] = useState(false);
-  const [anomaly, setAnamoly] = useState(false);
+  const [perturbed, setAnamoly] = useState(false);
   const [url,setUrl] = useState(null);
   const [img_64, setImage] = useState(false);
   const [label, setLabel] = useState("");
+  const [recon_error, setValue] = useState(null);
 
   useEffect(()=>{
     if(!localStorage.getItem("token")){
@@ -80,7 +81,7 @@ function Home() {
         try {
           setLoader(true);
           console.log(localStorage.getItem("token"))
-          fetch('http://localhost:8000/model', {
+          fetch('http://localhost:8000/model1', {
             method: 'POST',
             body: formData,
             headers: {
@@ -98,17 +99,9 @@ function Home() {
                 setTimeout(() => {
                   setLoader(false),
                   setShow(false);
-                //   setTimeout(() => {
-                    
-                //     console.log("hi")
-                //   }, 10000)
-                  // setAnamoly(data.anomaly)
-                  console.log(data.label)
-                //   console.log(data.reconstruction_error)
-                //   setOutput(data.reconstruction_error);
-                    setImage(data.image);
-                    setLabel(data.label);
-                    setShow(true);
+                  setValue(data.recon_error);
+                  setAnamoly(data.perturbed)
+                  setShow(true);
                 }, 3000)
               }
             })
@@ -165,9 +158,16 @@ function Home() {
       <div>
         <div className={"bg-teal-100 border-t-4 border-teal-500 rounded-b text-teal-900 px-4 py-3 shadow-md " + `${show ? "visible" : "invisible"}`} role="alert">
           <div className="flex">
+            <div className="py-1"><svg className="fill-current h-6 w-6 text-teal-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM9 11V9h2v6H9v-4zm0-6h2v2H9V5z" /></svg></div>
+            <div>
+                <p className="font-bold">OUTPUT</p>
+                <p className="text-sm">Reconstruction Error: {recon_error}</p>
+                <p className="text-sm">{perturbed? <b>The input dataset is most likely an anomaly</b>:<b>The input dataset is most likely not an anomaly</b>}</p>
+
+            </div>
           </div>
-          <div className=''>
-          {img_64 && <img src={`data:image/png;base64,${img_64}`} alt="Image" />}
+          <div className=''>{perturbed? <img src="image_6.png" id="selectedImage" className='h-32 w-32 p-1'/>:<img src="image_5.png" id="selectedImage" className='h-32 w-32 p-1'/>}
+            
           </div>
         </div>
       </div>

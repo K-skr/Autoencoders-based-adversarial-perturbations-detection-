@@ -9,7 +9,24 @@ import io
 CLASS_INDEX = None
 CLASS_INDEX_PATH = 'https://s3.amazonaws.com/deep-learning-models/image-models/imagenet_class_index.json'
 
+def preprocess_image(img, target_size=(128, 128)):
+    images = []
+    if img.mode != "RGB":
+        img = img.convert("RGB")
 
+    # Resize image to target size
+    img = img.resize(target_size)
+    # Convert image to NumPy array and normalize to [0, 1]
+    img_array = np.array(img) / 255.0
+    images.append(img_array)
+    images_array = np.array(images)
+
+    return images_array
+def mean_squared_error(image1, image2):
+    # Flatten the images to 1D arrays and compute the MSE
+    diff = image1 - image2
+    mse = np.mean(np.square(diff))  # MSE calculation
+    return mse
 def preprocess_image_batch(image_arr, img_size=None, crop_size=None, color_mode="rgb", out=None):
     img_list = []
 
